@@ -1,0 +1,466 @@
+<!doctype html>
+<html lang=en>
+<head>
+	<meta charset=utf-8>
+	<meta name="google-site-verification" content="eoQP3nJ2qyDceZYAYN6-XaF24JZ2DVrzC6penYi8Rnc" />
+	<meta name="viewport" content="width=device-width">
+	
+<!--
+
+
+
+	Greets to Cerul, SkyNet, and the rest of my peeps :P
+
+
+-->
+
+		<meta name="keywords" content="stackexchange, c" />
+		<meta name="description" content="
+Author:,  , HostileFork, Title:,  , Where the printf() Rubber Meets the Road, Date:,  , 14-Mar-2010, Length:,  , 2173,  , words
+" />
+
+
+		<title>stackexchange : Where the printf() Rubber Meets the Road</title>
+
+	<!-- Django allows us to pass parameters into our templates, good to have as javascript vars -->
+	<!-- http://lethain.com/entry/2008/sep/21/intro-to-unintrusive-javascript-with-django/ -->
+	<script>
+
+		PARAMS = {};
+		PARAMS.libs_url = ""; 
+
+	</script>
+
+
+
+<link rel="stylesheet" type="text/css" href="http://hostilefork.com/media/google-code-prettify/prettify.css" /><link rel="stylesheet" type="text/css" href="http://hostilefork.com/media/google-code-prettify/reb4me-prettify.css" /><link rel="stylesheet" type="text/css" href="http://hostilefork.com/media/default.css" /><style type="text/css">			#title h1 {
+				padding-right: 80px;
+			}
+
+			#title {
+    			min-height: 75px;
+    			background-image: url(http://hostilefork.com/media/peeking-fork-80x75.png);
+    			background-repeat: no-repeat;
+    			background-position: right bottom;
+			}
+
+			/* We suppress the characters div from dialogue */
+			#entry-characters {
+				display: none;
+			}</style>
+
+
+
+
+
+<script type="text/javascript" src="http://ajax.googleapis.com/ajax/libs/jquery/1.10.1/jquery.min.js"></script><script type="text/javascript">/* http://stackoverflow.com/questions/1402698/binding-arrow-keys-in-js-jquery */
+$(document).keydown(function(e) {
+	if (e.shiftKey || e.ctrlKey || e.altKey || e.metaKey)
+		return;
+		
+	switch(e.which) {
+		case 37: // left (up is 38) 
+			anchors = $("#prev > a");
+			if (anchors.length > 0) {
+				window.location.href = anchors.eq(0).attr('href');
+			}
+		break;
+
+	case 39: // right (down is 40)
+			anchors = $("#next > a");
+			if (anchors.length > 0) {
+				window.location.href = anchors.eq(0).attr('href');
+			}
+		break;
+
+	default: return; // exit this handler for other keys
+	}
+
+	e.preventDefault(); // prevent the default action (scroll / move caret)
+});</script><script type="text/javascript" src="http://hostilefork.com/media/google-code-prettify/prettify.js"></script><script type="text/javascript" src="http://hostilefork.com/media/google-code-prettify/lang-rebol.js"></script><script type="text/javascript">$(document).ready(
+	function(){
+		window.prettyPrint && prettyPrint()
+	}
+);</script>
+
+
+	
+	</head>
+<body >
+
+	<div id="body-div">
+		<div id="prologue">
+			
+<div style="text-align: right; margin-right: 8px;"><p><img src="http://hostilefork.com/media/feed-icon-14x14.png" alt="Feed Icon" />&nbsp;<a href="http://blog.hostilefork.com/feed/">RSS 1.0 XML Feed</a> available </p></div>
+
+		</div>
+
+		<div id="title">
+			<h1>Where the printf() Rubber Meets the Road</h1>
+		</div>
+
+		<div id="leader">
+			<ul id="path">
+				
+<li><a href="http://blog.hostilefork.com/" title="Home">Home</a></li><li><a href="http://blog.hostilefork.com/tag/stackexchange/" class="post-tag" rel="tag">stackexchange</a></li><li><span>Where the printf() Rubber Meets the Road</span></li>
+
+			</ul>
+		</div>
+		
+		<div id="main">			
+			
+<div id="entry-date"><p><b>Date:</b> <span>
+
+14-Mar-2010/19:52
+
+</span></p></div>
+
+<div id="entry-tags"><p><b>Tags:</b> <span>
+
+<a href="http://blog.hostilefork.com/tag/stackexchange/" class="post-tag" rel="tag">stackexchange</a>, <a href="http://blog.hostilefork.com/tag/c/" class="post-tag" rel="tag">c</a>
+
+</span></p></div>
+
+<div id="entry-characters"><p><b>Characters:</b> <span>
+
+(none)
+
+</span></p></div>
+
+<div id="entry-content">
+
+<div class="exposition">
+After ignoring StackOverflow for a while, I decided to check up on it a bit lately.  Someone asked <a href="http://stackoverflow.com/questions/2442966/c-c-function-definitions-without-assembly/">a question</a> that's one of those kind of fundamental curiosity issues that I enjoy explaining.  He said:</div>
+<blockquote><div class="exposition">
+I always thought that functions like printf() are in the last step defined using inline assembly. That deep into stdio.h is buried some asm code that actually tells CPU what to do. Something like in dos, first mov beginning of the string to some memory location or register and than call some int. But since x64 version of Visual Studio doesn't support inline assembler at all, it made me think that there are really no assembler-defined functions in C/C++. So, please, how is for example printf() defined in C/C++ without using assembler code? What actually executes the right software interrupt?</div>
+</blockquote>
+<div class="exposition">
+Obviously the answer is going to depend on the implementation.  Yet I thought that with the open-sourced GNU C Library, it would be pretty straightforward to show how most of it is in C but it bottoms out at <code>syscall</code>.  But it really was quite a maze to connect all the dots without doing any hand-waving!  So I found that my explanation just kept growing until it was so long that a blog entry was a more fitting format.</div>
+<div class="exposition">
+So read on, fearless explorers, as we dig into the complicated answer to a seemingly simple question...</div>
+<!-- more -->
+<h3>First Steps</h3>
+<div class="exposition">
+We'll of course start with the prototype for <code>printf</code>, which is defined in the file <a href="http://sourceware.org/git/?p=glibc.git;a=blob;f=libio/stdio.h;h=85542b1cfdbd50941d288dde8e22e678b10b1333;hb=HEAD">libc/libio/stdio.h</a></div>
+<pre class="prettyprint lang-C"><code>extern int printf (__const char *__restrict __format, ...);
+</code></pre>
+<div class="exposition">
+You won't find the source code for a function called <code>printf</code>, however.  Instead, in the file <a href="http://sourceware.org/git/?p=glibc.git;a=blob;f=stdio-common/printf.c;h=4c8f3a2a0c38ab27a2eed4d2ff3b804980aa8f9f;hb=HEAD">/libc/stdio-common/printf.c</a> you'll find a little bit of code associated with a function called <code>__printf</code>:</div>
+<pre class="prettyprint lang-C"><code>int __printf (const char *format, ...)
+{
+    va_list arg;
+    int done;
+
+    va_start (arg, format);
+    done = vfprintf (stdout, format, arg);
+    va_end (arg);
+
+    return done;
+}
+</code></pre>
+<div class="exposition">
+A macro in the same file sets up an association so that this function is defined as an alias for the non-underscored <code>printf</code>:</div>
+<pre class="prettyprint lang-C"><code>ldbl_strong_alias (__printf, printf);
+</code></pre>
+<div class="exposition">
+It makes sense that <code>printf</code> would be a thin layer that calls <code>vfprintf</code> with <code>stdout</code>.  Indeed, the meat of the formatting work is done in <code>vfprintf</code>, which you'll find in <a href="http://sourceware.org/git/?p=glibc.git;a=blob;f=stdio-common/vprintf.c;h=5c9cac494a6db796a8263401f98964ae4b6a63a2;hb=HEAD">libc/stdio-common/vfprintf.c</a>.  It's quite a lengthy function, but you can see that it's still all in C!</div>
+<h3>Deeper Down the Rabbit Hole...</h3>
+<div class="exposition">
+<code>vfprintf</code> mysteriously calls <code>outchar</code> and <code>outstring</code>, which are weird macros defined in the same file:</div>
+<pre class="prettyprint lang-C"><code>#define outchar(Ch) \
+   do \
+   { \
+       register const INT_T outc = (Ch); \
+       if (PUTC (outc, s) == EOF || done == INT_MAX) \
+       { \
+            done = -1; \
+            goto all_done; \
+       } \
+       ++done; \
+   } \
+   while (0)
+</code></pre>
+<div class="exposition">
+Sidestepping the question of why it's so weird, we see that it's dependent on the enigmatic <code>PUTC</code>, also in the same file:</div>
+<pre class="prettyprint lang-C"><code>#define PUTC(C, F) IO_putwc_unlocked (C, F)
+</code></pre>
+<div class="exposition">
+When you get to the definition of <code>IO_putwc_unlocked</code> in <a href="http://sourceware.org/git/?p=glibc.git;a=blob;f=libio/libio.h;h=3c9f2bd3e847429dcb14eb37d3b8369998bd19ee;hb=HEAD">libc/libio/libio.h</a>, you might start thinking that you no longer care how <code>printf</code> works:</div>
+<pre class="prettyprint lang-C"><code>#define _IO_putwc_unlocked(_wch, _fp) \
+   (_IO_BE ((_fp)-&gt;_wide_data-&gt;_IO_write_ptr \
+        &gt;= (_fp)-&gt;_wide_data-&gt;_IO_write_end, 0) \
+        ? __woverflow (_fp, _wch) \
+        : (_IO_wint_t) (*(_fp)-&gt;_wide_data-&gt;_IO_write_ptr++ = (_wch)))
+</code></pre>
+<div class="exposition">
+But despite being a little hard to read, it's just doing buffered output.  If there's enough room in the file pointer's buffer, then it will just stick the character into it...but if not, it calls <code>__woverflow</code>.  Since the only option when you've run out of buffer is to flush to the screen (or whatever device your file pointer represents), we can hope to find the magic incantation there.</div>
+<h3>Vtables in C?</h3>
+<div class="exposition">
+If you guessed that we're going to hop through another frustrating level of indirection, you'd be right.  Look in <a href="http://sourceware.org/git/?p=glibc.git;a=blob;f=libio/wgenops.c;h=e2adedd6d4d07c9f66b870de644d6c3d84848063;hb=HEADp">libc/libio/wgenops.c</a> and you'll find the definition of <code>__woverflow</code>:</div>
+<pre class="prettyprint lang-C"><code>wint_t 
+__woverflow (f, wch)
+    _IO_FILE *f;
+    wint_t wch;
+{
+    if (f-&gt;_mode == 0)
+        _IO_fwide (f, 1);
+    return _IO_OVERFLOW (f, wch);
+}
+</code></pre>
+<div class="exposition">
+Basically, file pointers are implemented in the GNU standard library as objects.  They have data members but also function members which you can call with variations of the <code>JUMP</code> macro.  In the file <a href="http://sourceware.org/git/?p=glibc.git;a=blob;f=libio/libioP.h;h=854f049291c945b6ec2c552daefe901f23f95a4b;hb=HEAD">libc/libio/libioP.h</a> you'll find a little documentation of this technique:</div>
+<pre class="prettyprint lang-C"><code>/* THE JUMPTABLE FUNCTIONS.
+
+ * The _IO_FILE type is used to implement the FILE type in GNU libc,
+ * as well as the streambuf class in GNU iostreams for C++.
+ * These are all the same, just used differently.
+ * An _IO_FILE (or FILE) object is allows followed by a pointer to
+ * a jump table (of pointers to functions).  The pointer is accessed
+ * with the _IO_JUMPS macro.  The jump table has a eccentric format,
+ * so as to be compatible with the layout of a C++ virtual function table.
+ * (as implemented by g++).  When a pointer to a streambuf object is
+ * coerced to an (_IO_FILE*), then _IO_JUMPS on the result just
+ * happens to point to the virtual function table of the streambuf.
+ * Thus the _IO_JUMPS function table used for C stdio/libio does
+ * double duty as the virtual function table for C++ streambuf.
+ *
+ * The entries in the _IO_JUMPS function table (and hence also the
+ * virtual functions of a streambuf) are described below.
+ * The first parameter of each function entry is the _IO_FILE/streambuf
+ * object being acted on (i.e. the 'this' parameter).
+ */
+</code></pre>
+<div class="exposition">
+So when we find <code>IO_OVERFLOW</code> in <a href="http://sourceware.org/git/?p=glibc.git;a=blob;f=libio/genops.c;h=481fbc52b0c0f7f0d4cabaa6676c48f92b84a093;hb=HEAD">libc/libio/genops.c</a>, we find it's a macro which calls a "1-parameter" <code>__overflow</code> method on the file pointer:</div>
+<pre class="prettyprint lang-C"><code>#define IO_OVERFLOW(FP, CH) JUMP1 (__overflow, FP, CH)
+</code></pre>
+<div class="exposition">
+The jump tables for the various file pointer types are in <a href="http://sourceware.org/git/?p=glibc.git;a=blob;f=libio/fileops.c;h=4698953f7ae1d37b4e0911bf2e28cc72d7a1519e;hb=HEAD">libc/libio/fileops.c</a></div>
+<pre class="prettyprint lang-C"><code>const struct _IO_jump_t _IO_file_jumps =
+{
+  JUMP_INIT_DUMMY,
+  JUMP_INIT(finish, INTUSE(_IO_file_finish)),
+  JUMP_INIT(overflow, INTUSE(_IO_file_overflow)),
+  JUMP_INIT(underflow, INTUSE(_IO_file_underflow)),
+  JUMP_INIT(uflow, INTUSE(_IO_default_uflow)),
+  JUMP_INIT(pbackfail, INTUSE(_IO_default_pbackfail)),
+  JUMP_INIT(xsputn, INTUSE(_IO_file_xsputn)),
+  JUMP_INIT(xsgetn, INTUSE(_IO_file_xsgetn)),
+  JUMP_INIT(seekoff, _IO_new_file_seekoff),
+  JUMP_INIT(seekpos, _IO_default_seekpos),
+  JUMP_INIT(setbuf, _IO_new_file_setbuf),
+  JUMP_INIT(sync, _IO_new_file_sync),
+  JUMP_INIT(doallocate, INTUSE(_IO_file_doallocate)),
+  JUMP_INIT(read, INTUSE(_IO_file_read)),
+  JUMP_INIT(write, _IO_new_file_write),
+  JUMP_INIT(seek, INTUSE(_IO_file_seek)),
+  JUMP_INIT(close, INTUSE(_IO_file_close)),
+  JUMP_INIT(stat, INTUSE(_IO_file_stat)),
+  JUMP_INIT(showmanyc, _IO_default_showmanyc),
+  JUMP_INIT(imbue, _IO_default_imbue)
+};
+libc_hidden_data_def (_IO_file_jumps)
+</code></pre>
+<div class="exposition">
+There's also a #define which equates <code>_IO_new_file_overflow</code> with <code>_IO_file_overflow</code>, and the former is defined in the same source file.</div>
+<div class="note"><span class="note-span">Note</span> <span class="exposition">
+<code>INTUSE</code> is just a macro which marks functions that are for internal use, it doesn't mean anything like "this function uses an interrupt")</span>
+</div>
+<h3>Are we there yet?!</h3>
+<div class="exposition">
+The source code for <code>_IO_new_file_overflow</code> does a bunch more buffer manipulation, but it does call <code>_IO_do_flush</code>:</div>
+<pre class="prettyprint lang-C"><code>#define _IO_do_flush(_f) \
+    INTUSE(_IO_do_write)(_f, (_f)-&gt;_IO_write_base, \
+        (_f)-&gt;_IO_write_ptr-(_f)-&gt;_IO_write_base)
+</code></pre>
+<div class="exposition">
+We're now at a point where <code>_IO_do_write</code> is probably where the rubber actually meets the road: an <i>unbuffered</i>, <i>actual</i>, <i>direct</i> write to an I/O device.  At least we can hope!  It is mapped by a macro to <code>_IO_new_do_write</code> and we have this:</div>
+<pre class="prettyprint lang-C"><code>static
+_IO_size_t
+new_do_write (fp, data, to_do)
+     _IO_FILE *fp;
+     const char *data;
+     _IO_size_t to_do;
+{
+  _IO_size_t count;
+  if (fp-&gt;_flags &amp; _IO_IS_APPENDING)
+    /* On a system without a proper O_APPEND implementation,
+       you would need to sys_seek(0, SEEK_END) here, but is
+       is not needed nor desirable for Unix- or Posix-like systems.
+       Instead, just indicate that offset (before and after) is
+       unpredictable. */
+    fp-&gt;_offset = _IO_pos_BAD;
+  else if (fp-&gt;_IO_read_end != fp-&gt;_IO_write_base)
+    {
+      _IO_off64_t new_pos
+    = _IO_SYSSEEK (fp, fp-&gt;_IO_write_base - fp-&gt;_IO_read_end, 1);
+      if (new_pos == _IO_pos_BAD)
+  return 0;
+      fp-&gt;_offset = new_pos;
+    }
+  count = _IO_SYSWRITE (fp, data, to_do);
+  if (fp-&gt;_cur_column &amp;&amp; count)
+    fp-&gt;_cur_column = INTUSE(_IO_adjust_column) (fp-&gt;_cur_column - 1, data,
+            - count) + 1;
+  _IO_setg (fp, fp-&gt;_IO_buf_base, fp-&gt;_IO_buf_base, fp-&gt;_IO_buf_base);
+  fp-&gt;_IO_write_base = fp-&gt;_IO_write_ptr = fp-&gt;_IO_buf_base;
+  fp-&gt;_IO_write_end = (fp-&gt;_mode &lt;= 0
+           &amp;&amp; (fp-&gt;_flags &amp; (_IO_LINE_BUF+_IO_UNBUFFERED))
+           ? fp-&gt;_IO_buf_base : fp-&gt;_IO_buf_end);
+  return count;
+}
+</code></pre>
+<div class="exposition">
+Sadly we're stuck again... <code>_IO_SYSWRITE</code> is doing the work:</div>
+<pre class="prettyprint lang-C"><code>/* The 'syswrite' hook is used to write data from an existing buffer
+   to an external file.  It generalizes the Unix write(2) function.
+   It matches the streambuf::sys_write virtual function, which is
+   specific to this implementation. */
+typedef _IO_ssize_t (*_IO_write_t) (_IO_FILE *, const void *, _IO_ssize_t);
+#define _IO_SYSWRITE(FP, DATA, LEN) JUMP2 (__write, FP, DATA, LEN)
+#define _IO_WSYSWRITE(FP, DATA, LEN) WJUMP2 (__write, FP, DATA, LEN)
+</code></pre>
+<div class="exposition">
+So inside of the <code>do_write</code> we call the <code>write</code> method on the file pointer.  We know from our jump table above that is mapped to <code>_IO_new_file_write</code>, so what's that do?</div>
+<pre class="prettyprint lang-C"><code>_IO_ssize_t
+_IO_new_file_write (f, data, n)
+     _IO_FILE *f;
+     const void *data;
+     _IO_ssize_t n;
+{
+  _IO_ssize_t to_do = n;
+  while (to_do &gt; 0)
+    {
+      _IO_ssize_t count = (__builtin_expect (f-&gt;_flags2
+         &amp; _IO_FLAGS2_NOTCANCEL, 0)
+         ? write_not_cancel (f-&gt;_fileno, data, to_do)
+         : write (f-&gt;_fileno, data, to_do));
+      if (count &lt; 0)
+      {
+        f-&gt;_flags |= _IO_ERR_SEEN;
+        break;
+      }
+      to_do -= count;
+      data = (void *) ((char *) data + count);
+    }
+  n -= to_do;
+  if (f-&gt;_offset &gt;= 0)
+    f-&gt;_offset += n;
+  return n;
+}
+</code></pre>
+<div class="exposition">
+Now it just calls <code>write</code>!  Well where is the implementation for that?  You'll find <code>write</code> in <a href="http://sourceware.org/git/?p=glibc.git;a=blob;f=posix/unistd.h;h=f8b84e3cb35643264a4bfa42b8714c46976cf77c;hb=HEAD">libc/posix/unistd.h</a>:</div>
+<pre class="prettyprint lang-C"><code>/* Write N bytes of BUF to FD.  Return the number written, or -1.
+
+   This function is a cancellation point and therefore not marked with
+   __THROW.  */
+extern ssize_t write (int __fd, __const void *__buf, size_t __n) __wur;
+</code></pre>
+<div class="note"><span class="note-span">Note</span> <span class="exposition">
+<code>__wur</code> is a macro for <code>__attribute__ ((__warn_unused_result__))</code></span>
+</div>
+<h3>Functions Generated From a Table</h3>
+<div class="exposition">
+That's only a prototype for <code>write</code>.  You won't find a write.c file for Linux in the GNU standard library.  Instead, you'll find platform-specific methods of connecting to the OS write function in various ways, all in the <a href="http://sourceware.org/git/?p=glibc.git;a=tree;f=sysdeps;h=f1c8a1febcebabaf9f7b1529c7ca7c5a85ba98de;hb=HEAD">libc/sysdeps/</a> directory.</div>
+<div class="exposition">
+We'll keep following along with how Linux does it.  There is a file called <a href="http://sourceware.org/git/?p=glibc.git;a=blob;f=sysdeps/unix/syscalls.list;h=04ed63c4d75451b978fd9488e102fe0d058b0295;hb=HEAD">sysdeps/unix/syscalls.list</a> which is used to generate the <code>write</code> function automatically.  The relevant data from the table is:</div>
+<ul><li><div class="exposition">
+<b>File name:</b> write</div>
+</li>
+<li><div class="exposition">
+<b>Caller:</b> "-" <i>(i.e. Not Applicable)</i></div>
+</li>
+<li><div class="exposition">
+<b>Syscall name:</b> write</div>
+</li>
+<li><div class="exposition">
+<b>Args:</b> Ci:ibn</div>
+</li>
+<li><div class="exposition">
+<b>Strong name:</b> __libc_write</div>
+</li>
+<li><div class="exposition">
+<b>Weak names: </b> __write, write</div>
+</li>
+</ul>
+<div class="exposition">
+Not all that mysterious, except for the <b>Ci:ibn</b>.  The C means "cancellable".  The colon separates the return type from the argument types, and if you want a deeper explanation of what they mean then you can see the comment in the shell script which generates the code, <a href="http://sourceware.org/git/?p=glibc.git;a=blob;f=sysdeps/unix/make-syscalls.sh;h=a8b8a262a7cd20ee9fd4618ddc94120d283a813e;hb=HEAD">libc/sysdeps/unix/make-syscalls.sh</a>.</div>
+<div class="exposition">
+So now we're expecting to be able to link against a function called <code>__libc_write</code> which is generated by this shell script.  But what's being generated?  Some C code which implements write via a macro called <code>SYS_ify</code>, which you'll find in <a href="http://sourceware.org/git/?p=glibc.git;a=blob;f=sysdeps/unix/sysdep.h;h=11e5317dfffdffd9ebc5ca2091d701b99be98b31;hb=HEAD">sysdeps/unix/sysdep.h</a></div>
+<pre class="prettyprint lang-C"><code>#define SYS_ify(syscall_name) __NR_##syscall_name
+</code></pre>
+<div class="exposition">
+Ah, good old token-pasting :P.  So basically, the implementation of this <code>__libc_write</code> becomes nothing more than a proxy invocation of the <code>syscall</code> function with a parameter named <code>__NR_write</code>, and the other arguments.</div>
+<h3>Where The Sidewalk Ends...</h3>
+<div class="exposition">
+I know this has been a fascinating journey, but now we're at the end of GNU libc.  That number <code>__NR_write</code> is defined by Linux.  For 32-bit X86 architectures it will get you to <a href="http://www.cs.fsu.edu/~baker/devices/lxr/http/source/linux/include/asm-x86/unistd_32.h?v=2.6.25#L12">linux/arch/x86/include/asm/unistd_32.h</a>:</div>
+<pre class="prettyprint lang-C"><code>#define __NR_write 4
+</code></pre>
+<div class="exposition">
+This is the final step where the "rubber meets the road", but how it is done is system-dependent.  That would make an article in itself, but we've found where the rubber meets the road.  What you want to read up on to go further is this thing called <a href="http://en.wikipedia.org/wiki/System_call">"syscall"</a>.</div>
+
+
+</div>
+
+
+<div id="prevnext">
+<div id="prev"><a href="http://blog.hostilefork.com/bil-2010-participants-welcome/" title="Previous">BIL 2010 PARTICIPANTS - WELCOME</a></div>
+<div id="next"><a href="http://blog.hostilefork.com/when-should-one-use-const-cast/" title="Next">When should one use const_cast, anyway?</a></div>
+</div>
+
+
+			
+<div class="exposition">
+Currently I am <a href="http://blog.hostilefork.com/importing-comments-with-disqus-api/">experimenting with using Disqus</a> for comments, however it is configured that you don't have to log in or tie it to an account.  Simply check the "I'd rather post as a guest" button that appears after you begin typing in a name.</div>
+
+	<div id="disqus_thread"></div>
+	<script type="text/javascript">
+	/* * * CONFIGURATION VARIABLES: EDIT BEFORE PASTING INTO YOUR WEBPAGE * * */
+	var disqus_shortname = 'hostilefork'; // required: replace example with your forum shortname
+
+	/* * * DON'T EDIT BELOW THIS LINE * * */
+	(function() {
+	var dsq = document.createElement('script'); dsq.type = 'text/javascript'; dsq.async = true;
+	dsq.src = '//' + disqus_shortname + '.disqus.com/embed.js';
+	(document.getElementsByTagName('head')[0] || document.getElementsByTagName('body')[0]).appendChild(dsq);
+	})();
+	</script>
+	<noscript>Please enable JavaScript to view the <a href="http://disqus.com/?ref_noscript">comments powered by Disqus.</a></noscript>
+	<a href="http://disqus.com" class="dsq-brlink">comments powered by <span class="logo-disqus">Disqus</span></a>
+
+
+		</div>
+
+		<div id="trailer">
+			
+<div style="text-align: right;"><span>Copyright (c) 2007-2014 hostilefork.com</span></div>
+
+		</div>
+
+		<div id="epilogue">
+			
+<div style="text-align: center;"><p>Project names and graphic designs are All Rights Reserved, unless otherwise noted.  Software codebases are governed by licenses included in their distributions.  Posts on <a href="http://blog.hostilefork.com">blog.hostilefork.com</a>
+		are licensed under the Creative Commons <a href="http://creativecommons.org/licenses/by-nc-sa/4.0/">BY-NC-SA 4.0</a> license, and may be excerpted or adapted under the terms of that license for noncommercial purposes.</p></div>
+
+		</div>
+
+	</div>
+
+
+<!-- This is the Google Universal Analytics Code -->
+
+<script>
+  (function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
+  (i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
+  m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
+  })(window,document,'script','//www.google-analytics.com/analytics.js','ga');
+
+  ga('create', 'UA-2926272-2', 'hostilefork.com');
+  ga('send', 'pageview');
+
+</script>
+
+
+</body>
+</html>

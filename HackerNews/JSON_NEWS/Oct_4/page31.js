@@ -1,0 +1,17 @@
+news31 = [
+	{title : "SwiftOnSecurity: A story about Jessica", site: "swiftonsecurity.tumblr.co", href: "http://swiftonsecurity.tumblr.com/post/98675308034/a-story-about-jessica", time: "4 days ago"}, 
+	{title : "The Compucolor 8001 (1976)", site: "oldcomputers.ne", href: "http://oldcomputers.net/compucolor-8001.html", time: "3 days ago"}, 
+	{title : "Blink an LED with JavaScript – Spark Blog", site: "spark.i", href: "http://blog.spark.io/2014/09/29/blink-an-led-with-javascript/", time: "3 days ago"}, 
+	{title : "I'm not sure it's Mou against the world", site: "larryhynes.ne", href: "http://larryhynes.net/2014/09/mou-against-the-world.html", time: "3 days ago"}, 
+	{title : "Show HN: Realm for Android", site: "realm.i", href: "http://realm.io/news/realm-for-android/", time: "4 days ago"}, 
+	{title : "Adobe joins the Chromebook party, starting with Photoshop", site: "chrome.blogspot.co", href: "http://chrome.blogspot.com/2014/09/adobe-joins-chromebook-party-starting.html", time: "5 days ago"}, 
+	{title : "Microsoft’s new Sway app – WYSIWYG", site: "theverge.co", href: "http://www.theverge.com/2014/10/1/6879999/microsoft-sway-office-app", time: "3 days ago"}, 
+	{title : "Functional Programming in Swift", site: "objc.i", href: "http://www.objc.io/books/", time: "3 days ago"}, 
+	{title : "Fixing the Internet for confidentiality and security", site: "markshuttleworth.co", href: "http://www.markshuttleworth.com/archives/1407", time: "4 days ago"}, 
+	{title : "Show HN: Sync Done Beautifully", site: "pixelapse.co", href: "https://www.pixelapse.com/sync", time: "4 days ago"}, 
+	{title : "Gifshot: JS library to create animated GIFs from media streams, videos, images", site: "yahoo.github.i", href: "http://yahoo.github.io/gifshot/", time: "4 days ago"}, 
+	{title : "A brief history of CPAN", site: "cpan.i", href: "http://cpan.io/ref/history.html", time: "4 days ago"}, 
+	{title : "Schrödinger's Shift Key", site: "allenpike.co", href: "http://www.allenpike.com/2014/schrodingers-shift-key/", time: "3 days ago"}, 
+	{title : "76 of 79 Deceased NFL Players Found to Have Brain Disease", site: "pbs.or", href: "http://www.pbs.org/wgbh/pages/frontline/sports/concussion-watch/76-of-79-deceased-nfl-players-found-to-have-brain-disease/", time: "3 days ago"}, 
+	{title : "Apple takes down another indie dev", site: "rollins.i", href: "http://blog.rollins.io/2014/09/30/the-king-makers-apple-takes-down-an-indie-dev/", time: "4 days ago"}, 
+]
